@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -13,16 +14,41 @@ import (
 )
 
 const (
-	ImgDir = "image"
+	ImgDir       = "image"
+	jsonFileName = "items.json"
 )
 
 type Response struct {
 	Message string `json:"message"`
 }
 
+type Item struct {
+	Name     string `json:"name"`
+	Category string `json:"category"`
+}
+
+type Items struct {
+	Items []Item `json:"items"`
+}
+
 func root(c echo.Context) error {
 	res := Response{Message: "Hello, world!"}
 	return c.JSON(http.StatusOK, res)
+}
+
+var items Items
+
+func init() {
+	// Read items from JSON file
+	f, err := os.Open(jsonFileName)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	if err := json.NewDecoder(f).Decode(&items); err != nil {
+		panic(err)
+	}
 }
 
 func addItem(c echo.Context) error {
@@ -31,6 +57,21 @@ func addItem(c echo.Context) error {
 	category := c.FormValue("category")
 	c.Logger().Infof("Receive item: %s, %s", name, category)
 
+	// Add items
+	items.Items = append(items.Items, Item{Name: name, Category: category})
+
+	// Write to JSON file
+	f, err := os.Create(jsonFileName)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	if err := json.NewEncoder(f).Encode(items); err != nil {
+		return err
+	}
+
+	// Response data
 	message := fmt.Sprintf("item received: %s, %s", name, category)
 	res := Response{Message: message}
 
