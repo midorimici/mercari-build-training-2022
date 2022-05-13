@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 
 	"github.com/labstack/echo/v4"
@@ -118,6 +119,26 @@ func addItem(c echo.Context) error {
 	return c.JSON(http.StatusOK, res)
 }
 
+func getItem(c echo.Context) error {
+	// Get item id
+	id := c.Param("id")
+
+	// Search for the specific item
+	var item Item
+	for _, i := range items {
+		itemId, err := strconv.Atoi(id)
+		if err != nil {
+			return err
+		}
+
+		if i.id == itemId {
+			item = i
+		}
+	}
+
+	return c.JSON(http.StatusOK, item)
+}
+
 func search(c echo.Context) error {
 	k := c.QueryParam("keyword")
 	var filteredItems []Item
@@ -170,6 +191,7 @@ func main() {
 	e.GET("/", root)
 	e.GET("/items", getItems)
 	e.POST("/items", addItem)
+	e.GET("/items/:id", getItem)
 	e.GET("/search", search)
 	e.GET("/image/:itemImg", getImg)
 
