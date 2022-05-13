@@ -65,12 +65,12 @@ func addItem(c echo.Context) error {
 	// Write to JSON file
 	f, err := os.Create(jsonFileName)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("addItem failed: %w", err))
 	}
 	defer f.Close()
 
 	if err := json.NewEncoder(f).Encode(items); err != nil {
-		return err
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("addItem failed: %w", err))
 	}
 
 	// Response data
