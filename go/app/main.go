@@ -106,6 +106,17 @@ func addItem(c echo.Context) error {
 	return c.JSON(http.StatusOK, res)
 }
 
+func search(c echo.Context) error {
+	k := c.QueryParam("keyword")
+	var filteredItems []Item
+	for _, i := range items {
+		if strings.Contains(i.Name, k) {
+			filteredItems = append(filteredItems, i)
+		}
+	}
+	return c.JSON(http.StatusOK, map[string][]Item{"items": filteredItems})
+}
+
 func getImg(c echo.Context) error {
 	// Create image path
 	imgPath := path.Join(ImgDir, c.Param("itemImg"))
@@ -147,6 +158,7 @@ func main() {
 	e.GET("/", root)
 	e.GET("/items", getItems)
 	e.POST("/items", addItem)
+	e.GET("/search", search)
 	e.GET("/image/:itemImg", getImg)
 
 	// Start server
