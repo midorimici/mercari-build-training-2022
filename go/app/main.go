@@ -31,24 +31,26 @@ type Items struct {
 	Items []Item `json:"items"`
 }
 
-func root(c echo.Context) error {
-	res := Response{Message: "Hello, world!"}
-	return c.JSON(http.StatusOK, res)
-}
-
 var items Items
 
-func init() {
+func loadItems() error {
 	// Read items from JSON file
 	f, err := os.Open(jsonFileName)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("loadItems failed: %w", err)
 	}
 	defer f.Close()
 
 	if err := json.NewDecoder(f).Decode(&items); err != nil {
-		panic(err)
+		return fmt.Errorf("loadItems failed: %w", err)
 	}
+
+	return nil
+}
+
+func root(c echo.Context) error {
+	res := Response{Message: "Hello, world!"}
+	return c.JSON(http.StatusOK, res)
 }
 
 func addItem(c echo.Context) error {
@@ -109,6 +111,11 @@ func main() {
 		AllowOrigins: []string{front_url},
 		AllowMethods: []string{http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete},
 	}))
+
+	// Load items from JSON file
+	if err := loadItems(); err != nil {
+		e.Logger.Fatal(err)
+	}
 
 	// Routes
 	e.GET("/", root)
