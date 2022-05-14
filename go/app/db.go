@@ -24,10 +24,16 @@ func loadItems() error {
 	for rows.Next() {
 		var id int
 		var name string
-		var category string
+		var categoryId int
 		var imageFilename string
 
-		if err := rows.Scan(&id, &name, &category, &imageFilename); err != nil {
+		if err := rows.Scan(&id, &name, &categoryId, &imageFilename); err != nil {
+			return fmt.Errorf("loadItems failed: %w", err)
+		}
+
+		var category string
+		categoryRow := db.QueryRow("SELECT name FROM category WHERE id = ?", categoryId)
+		if err := categoryRow.Scan(&category); err != nil {
 			return fmt.Errorf("loadItems failed: %w", err)
 		}
 
