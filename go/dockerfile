@@ -1,4 +1,9 @@
 FROM alpine
 
+RUN apk update
+RUN apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/community go=1.18.2-r0
+
+ENV PATH /go/bin:$PATH
+
 # STEP4-4では以下は変更しない
 CMD ["go", "version"]
