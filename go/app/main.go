@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -13,11 +14,38 @@ import (
 )
 
 const (
-	ImgDir = "image"
+	ImgDir       = "image"
+	jsonFileName = "items.json"
 )
 
 type Response struct {
 	Message string `json:"message"`
+}
+
+type Item struct {
+	Name     string `json:"name"`
+	Category string `json:"category"`
+}
+
+type Items struct {
+	Items []Item `json:"items"`
+}
+
+var items Items
+
+func loadItems() error {
+	// Read items from JSON file
+	f, err := os.Open(jsonFileName)
+	if err != nil {
+		return fmt.Errorf("loadItems failed: %w", err)
+	}
+	defer f.Close()
+
+	if err := json.NewDecoder(f).Decode(&items); err != nil {
+		return fmt.Errorf("loadItems failed: %w", err)
+	}
+
+	return nil
 }
 
 func root(c echo.Context) error {
@@ -28,9 +56,25 @@ func root(c echo.Context) error {
 func addItem(c echo.Context) error {
 	// Get form data
 	name := c.FormValue("name")
-	c.Logger().Infof("Receive item: %s", name)
+	category := c.FormValue("category")
+	c.Logger().Infof("Receive item: %s, %s", name, category)
 
-	message := fmt.Sprintf("item received: %s", name)
+	// Add items
+	items.Items = append(items.Items, Item{Name: name, Category: category})
+
+	// Write to JSON file
+	f, err := os.Create(jsonFileName)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("addItem failed: %w", err))
+	}
+	defer f.Close()
+
+	if err := json.NewEncoder(f).Encode(items); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("addItem failed: %w", err))
+	}
+
+	// Response data
+	message := fmt.Sprintf("item received: %s, %s", name, category)
 	res := Response{Message: message}
 
 	return c.JSON(http.StatusOK, res)
@@ -67,6 +111,11 @@ func main() {
 		AllowOrigins: []string{front_url},
 		AllowMethods: []string{http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete},
 	}))
+
+	// Load items from JSON file
+	if err := loadItems(); err != nil {
+		e.Logger.Fatal(err)
+	}
 
 	// Routes
 	e.GET("/", root)
