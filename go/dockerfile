@@ -5,5 +5,13 @@ RUN apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/co
 
 ENV PATH /go/bin:$PATH
 
-# STEP4-4では以下は変更しない
-CMD ["go", "version"]
+WORKDIR app
+
+COPY . .
+
+RUN go mod tidy
+
+EXPOSE 9000
+ENV HOST 0.0.0.0
+
+CMD ["go", "run", "app/main.go", "app/db.go"]
