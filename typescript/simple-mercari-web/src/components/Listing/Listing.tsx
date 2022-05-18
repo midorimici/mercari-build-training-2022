@@ -6,20 +6,33 @@ interface Prop {
   onListingCompleted?: () => void;
 }
 
+type FormValue = {
+  name: string;
+  category: string;
+  image: File | null;
+};
+
 export const Listing: React.FC<Prop> = (props) => {
   const { onListingCompleted } = props;
-  const initialState = {
+  const initialState: FormValue = {
     name: '',
     category: '',
-    image: '',
+    image: null,
   };
   const [values, setValues] = useState(initialState);
 
   const onChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setValues({ ...values, [event.target.name]: event.target.value });
+    if (event.target.name === 'image') {
+      setValues({ ...values, [event.target.name]: event.target.files?.item(0) ?? null });
+    } else {
+      setValues({ ...values, [event.target.name]: event.target.value });
+    }
   };
   const onSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (values.image === null) {
+      return;
+    }
     const data = new FormData();
     data.append('name', values.name);
     data.append('category', values.category);
