@@ -53,6 +53,10 @@ func root(c echo.Context) error {
 	return c.JSON(http.StatusOK, res)
 }
 
+func getItems(c echo.Context) error {
+	return c.JSON(http.StatusOK, items)
+}
+
 func addItem(c echo.Context) error {
 	// Get form data
 	name := c.FormValue("name")
@@ -119,6 +123,7 @@ func main() {
 
 	// Routes
 	e.GET("/", root)
+	e.GET("/items", getItems)
 	e.POST("/items", addItem)
 	e.GET("/image/:imageFilename", getImg)
 
