@@ -37,7 +37,7 @@ func loadItems() error {
 			return fmt.Errorf("loadItems failed: %w", err)
 		}
 
-		i := Item{id: id, Name: name, Category: category, ImageFilename: imageFilename}
+		i := Item{Id: id, Name: name, Category: category, ImageFilename: imageFilename}
 		items = append(items, i)
 	}
 	if err != nil {

@@ -25,7 +25,7 @@ type Response struct {
 }
 
 type Item struct {
-	id            int
+	Id            int    `json:"id"`
 	Name          string `json:"name"`
 	Category      string `json:"category"`
 	ImageFilename string `json:"image_filename"`
@@ -63,7 +63,7 @@ func addItem(c echo.Context) error {
 	}
 
 	// Update items
-	i := Item{id: int(id), Name: name, Category: category, ImageFilename: imageFilename}
+	i := Item{Id: int(id), Name: name, Category: category, ImageFilename: imageFilename}
 	items = append(items, i)
 
 	// Response data
@@ -85,7 +85,7 @@ func getItem(c echo.Context) error {
 			return err
 		}
 
-		if i.id == itemId {
+		if i.Id == itemId {
 			item = i
 		}
 	}
