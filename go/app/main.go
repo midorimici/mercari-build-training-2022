@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	ImgDir       = "image"
+	ImgDir       = "images"
 	jsonFileName = "items.json"
 )
 
