@@ -1,7 +1,7 @@
 package main
 
 import (
-	"encoding/json"
+	"database/sql"
 	"fmt"
 	"net/http"
 	"os"
@@ -11,11 +11,12 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 const (
-	ImgDir       = "images"
-	jsonFileName = "items.json"
+	ImgDir = "images"
+	dbPath = "./db/mercari.sqlite3"
 )
 
 type Response struct {
@@ -23,25 +24,40 @@ type Response struct {
 }
 
 type Item struct {
+	id       int
 	Name     string `json:"name"`
 	Category string `json:"category"`
 }
 
-type Items struct {
-	Items []Item `json:"items"`
-}
-
-var items Items
+var items []Item
 
 func loadItems() error {
-	// Read items from JSON file
-	f, err := os.Open(jsonFileName)
+	// Read items from DB file
+	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return fmt.Errorf("loadItems failed: %w", err)
 	}
-	defer f.Close()
+	defer db.Close()
 
-	if err := json.NewDecoder(f).Decode(&items); err != nil {
+	rows, err := db.Query("SELECT * FROM items")
+	if err != nil {
+		return fmt.Errorf("loadItems failed: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var id int
+		var name string
+		var category string
+
+		if err := rows.Scan(&id, &name, &category); err != nil {
+			return fmt.Errorf("loadItems failed: %w", err)
+		}
+
+		i := Item{id: id, Name: name, Category: category}
+		items = append(items, i)
+	}
+	if err != nil {
 		return fmt.Errorf("loadItems failed: %w", err)
 	}
 
@@ -54,7 +70,7 @@ func root(c echo.Context) error {
 }
 
 func getItems(c echo.Context) error {
-	return c.JSON(http.StatusOK, items)
+	return c.JSON(http.StatusOK, map[string][]Item{"items": items})
 }
 
 func addItem(c echo.Context) error {
@@ -63,25 +79,42 @@ func addItem(c echo.Context) error {
 	category := c.FormValue("category")
 	c.Logger().Infof("Receive item: %s, %s", name, category)
 
-	// Add items
-	items.Items = append(items.Items, Item{Name: name, Category: category})
-
-	// Write to JSON file
-	f, err := os.Create(jsonFileName)
+	// Write to DB
+	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("addItem failed: %w", err))
 	}
-	defer f.Close()
+	defer db.Close()
 
-	if err := json.NewEncoder(f).Encode(items); err != nil {
+	r, err := db.Exec("INSERT INTO items (name, category) values (?, ?)", name, category)
+	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("addItem failed: %w", err))
 	}
+
+	// Update items
+	id, err := r.LastInsertId()
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("addItem failed: %w", err))
+	}
+	i := Item{id: int(id), Name: name, Category: category}
+	items = append(items, i)
 
 	// Response data
 	message := fmt.Sprintf("item received: %s, %s", name, category)
 	res := Response{Message: message}
 
 	return c.JSON(http.StatusOK, res)
+}
+
+func search(c echo.Context) error {
+	k := c.QueryParam("keyword")
+	var filteredItems []Item
+	for _, i := range items {
+		if strings.Contains(i.Name, k) {
+			filteredItems = append(filteredItems, i)
+		}
+	}
+	return c.JSON(http.StatusOK, map[string][]Item{"items": filteredItems})
 }
 
 func getImg(c echo.Context) error {
@@ -125,6 +158,7 @@ func main() {
 	e.GET("/", root)
 	e.GET("/items", getItems)
 	e.POST("/items", addItem)
+	e.GET("/search", search)
 	e.GET("/image/:imageFilename", getImg)
 
 	// Start server
