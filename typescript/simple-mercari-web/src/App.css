@@ -35,6 +35,10 @@
   color: white;
 }
 
+.ItemList > img {
+  height: 160px;
+}
+
 .App-link {
   color: #61dafb;
 }
