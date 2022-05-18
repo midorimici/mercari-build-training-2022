@@ -44,7 +44,7 @@ export const ItemList: React.FC<Prop> = (props) => {
   }, [reload]);
 
   return (
-    <div>
+    <div className="ItemListContainer">
       {items.map((item) => {
         return (
           <div key={item.id} className="ItemList">
