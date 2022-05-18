@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 	"os"
@@ -24,9 +26,10 @@ type Response struct {
 }
 
 type Item struct {
-	id       int
-	Name     string `json:"name"`
-	Category string `json:"category"`
+	id            int
+	Name          string `json:"name"`
+	Category      string `json:"category"`
+	ImageFilename string `json:"image_filename"`
 }
 
 var items []Item
@@ -49,12 +52,13 @@ func loadItems() error {
 		var id int
 		var name string
 		var category string
+		var imageFilename string
 
-		if err := rows.Scan(&id, &name, &category); err != nil {
+		if err := rows.Scan(&id, &name, &category, &imageFilename); err != nil {
 			return fmt.Errorf("loadItems failed: %w", err)
 		}
 
-		i := Item{id: id, Name: name, Category: category}
+		i := Item{id: id, Name: name, Category: category, ImageFilename: imageFilename}
 		items = append(items, i)
 	}
 	if err != nil {
@@ -77,7 +81,15 @@ func addItem(c echo.Context) error {
 	// Get form data
 	name := c.FormValue("name")
 	category := c.FormValue("category")
-	c.Logger().Infof("Receive item: %s, %s", name, category)
+	image := c.FormValue("image")
+
+	// Hash the image file name
+	h := sha256.Sum256([]byte(image))
+	imageHash := hex.EncodeToString(h[:])
+	imageFilename := fmt.Sprintf("%s.jpg", imageHash)
+
+	// Log
+	c.Logger().Infof("Receive item: %s, %s, %s", name, category, imageFilename)
 
 	// Write to DB
 	db, err := sql.Open("sqlite3", dbPath)
@@ -86,7 +98,7 @@ func addItem(c echo.Context) error {
 	}
 	defer db.Close()
 
-	r, err := db.Exec("INSERT INTO items (name, category) values (?, ?)", name, category)
+	r, err := db.Exec("INSERT INTO items (name, category, image_filename) values (?, ?, ?)", name, category, imageFilename)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("addItem failed: %w", err))
 	}
@@ -96,11 +108,11 @@ func addItem(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("addItem failed: %w", err))
 	}
-	i := Item{id: int(id), Name: name, Category: category}
+	i := Item{id: int(id), Name: name, Category: category, ImageFilename: imageFilename}
 	items = append(items, i)
 
 	// Response data
-	message := fmt.Sprintf("item received: %s, %s", name, category)
+	message := fmt.Sprintf("item received: %s, %s, %s", name, category, imageFilename)
 	res := Response{Message: message}
 
 	return c.JSON(http.StatusOK, res)
