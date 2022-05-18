@@ -46,15 +46,31 @@ func addItem(c echo.Context) error {
 	// Get form data
 	name := c.FormValue("name")
 	category := c.FormValue("category")
-	image := c.FormValue("image")
+	imagePath := c.FormValue("image")
+	image, err := c.FormFile("image")
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("addItem failed: %w", err))
+	}
 
 	// Hash the image file name
-	h := sha256.Sum256([]byte(image))
+	h := sha256.Sum256([]byte(imagePath))
 	imageHash := hex.EncodeToString(h[:])
 	imageFilename := fmt.Sprintf("%s.jpg", imageHash)
 
 	// Log
 	c.Logger().Infof("Receive item: %s, %s, %s", name, category, imageFilename)
+
+	// Open the image file
+	imageFile, err := image.Open()
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("addItem failed: %w", err))
+	}
+	defer imageFile.Close()
+
+	b := make([]byte, image.Size)
+	if _, err := imageFile.Read(b); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("addItem failed: %w", err))
+	}
 
 	// Add the item to DB
 	id, err := addItemToDB(name, category, imageFilename)
@@ -63,8 +79,19 @@ func addItem(c echo.Context) error {
 	}
 
 	// Update items
-	i := Item{Id: int(id), Name: name, Category: category, ImageFilename: imageFilename}
+	i := Item{Id: id, Name: name, Category: category, ImageFilename: imageFilename}
 	items = append(items, i)
+
+	// Save the image to the local disk
+	f, err := os.Create(fmt.Sprintf("%s/%d.jpg", ImgDir, id))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("addItem failed: %w", err))
+	}
+	defer f.Close()
+
+	if _, err := f.Write(b); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("addItem failed: %w", err))
+	}
 
 	// Response data
 	message := fmt.Sprintf("item received: %s, %s, %s", name, category, imageFilename)
