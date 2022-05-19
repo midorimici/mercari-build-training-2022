@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	ImgDir = "image"
+	ImgDir = "images"
 	dbPath = "./db/mercari.sqlite3"
 )
 
@@ -133,7 +133,7 @@ func search(c echo.Context) error {
 
 func getImg(c echo.Context) error {
 	// Create image path
-	imgPath := path.Join(ImgDir, c.Param("itemImg"))
+	imgPath := path.Join(ImgDir, c.Param("imageFilename"))
 
 	if !strings.HasSuffix(imgPath, ".jpg") {
 		res := Response{Message: "Image path does not end with .jpg"}
@@ -174,7 +174,7 @@ func main() {
 	e.POST("/items", addItem)
 	e.GET("/items/:id", getItem)
 	e.GET("/search", search)
-	e.GET("/image/:itemImg", getImg)
+	e.GET("/image/:imageFilename", getImg)
 
 	// Start server
 	e.Logger.Fatal(e.Start(":9000"))
