@@ -24,6 +24,11 @@
   color: white;
 }
 
+.ItemListContainer {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+
 .ItemList {
   background-color: #222427;
   min-height: 8vh;
@@ -33,6 +38,10 @@
   justify-content: left;
   font-size: calc(10px + 1vmin);
   color: white;
+}
+
+.ItemList > img {
+  height: 160px;
 }
 
 .App-link {
