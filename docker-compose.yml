@@ -1,0 +1,14 @@
+version: "3.9"
+services:
+  svr:
+    build: ./go
+    ports:
+      - 9000:9000
+    environment:
+      FRONT_URL: 'http://localhost:3000'
+  web:
+    build: ./typescript/simple-mercari-web
+    ports:
+      - 3000:3000
+    environment:
+      API_URL: 'http://localhost:9000'
