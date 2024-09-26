@@ -1,1 +1,2 @@
-create table items(id integer primary key, name text, category text, image_filename text);
+create table items(id integer primary key, name text, category_id integer, image_filename text, foreign key(category_id) references category(id));
+create table category(id integer primary key, name text unique);

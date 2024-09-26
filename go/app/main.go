@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/sha256"
-	"database/sql"
 	"encoding/hex"
 	"fmt"
 	"net/http"
@@ -14,7 +13,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 const (
@@ -34,40 +32,6 @@ type Item struct {
 }
 
 var items []Item
-
-func loadItems() error {
-	// Read items from DB file
-	db, err := sql.Open("sqlite3", dbPath)
-	if err != nil {
-		return fmt.Errorf("loadItems failed: %w", err)
-	}
-	defer db.Close()
-
-	rows, err := db.Query("SELECT * FROM items")
-	if err != nil {
-		return fmt.Errorf("loadItems failed: %w", err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var id int
-		var name string
-		var category string
-		var imageFilename string
-
-		if err := rows.Scan(&id, &name, &category, &imageFilename); err != nil {
-			return fmt.Errorf("loadItems failed: %w", err)
-		}
-
-		i := Item{id: id, Name: name, Category: category, ImageFilename: imageFilename}
-		items = append(items, i)
-	}
-	if err != nil {
-		return fmt.Errorf("loadItems failed: %w", err)
-	}
-
-	return nil
-}
 
 func root(c echo.Context) error {
 	res := Response{Message: "Hello, world!"}
@@ -92,23 +56,13 @@ func addItem(c echo.Context) error {
 	// Log
 	c.Logger().Infof("Receive item: %s, %s, %s", name, category, imageFilename)
 
-	// Write to DB
-	db, err := sql.Open("sqlite3", dbPath)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("addItem failed: %w", err))
-	}
-	defer db.Close()
-
-	r, err := db.Exec("INSERT INTO items (name, category, image_filename) values (?, ?, ?)", name, category, imageFilename)
+	// Add the item to DB
+	id, err := addItemToDB(name, category, imageFilename)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("addItem failed: %w", err))
 	}
 
 	// Update items
-	id, err := r.LastInsertId()
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Errorf("addItem failed: %w", err))
-	}
 	i := Item{id: int(id), Name: name, Category: category, ImageFilename: imageFilename}
 	items = append(items, i)
 
